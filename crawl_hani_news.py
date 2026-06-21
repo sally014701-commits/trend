@@ -535,6 +535,15 @@ def should_exclude_article(section: str, sub_section: str, title: str, article_u
     normalized = re.sub(r"\s+", "", target)
     if "정치BAR" in normalized:
         return "정치 BAR 카테고리 제외"
+    if (section or "").strip() == "사회":
+        excluded_society_sub_sections = {"궂긴소식", "인사", "엔지오", "종교"}
+        normalized_sub_section = re.sub(r"\s+", "", sub_section or "")
+        if any(re.sub(r"\s+", "", name) in normalized_sub_section for name in excluded_society_sub_sections):
+            return f"사회 제외 상세 카테고리: {sub_section}"
+    if (section or "").strip() == "경제":
+        normalized_sub_section = re.sub(r"\s+", "", sub_section or "")
+        if "기업PR" in normalized_sub_section:
+            return f"경제 제외 상세 카테고리: {sub_section}"
     if any(keyword in target for keyword in ["사설", "칼럼", "논설", "기고"]):
         return "사설·칼럼 성격 콘텐츠 제외"
     return None
@@ -721,6 +730,7 @@ def main():
     parser.add_argument("--max-pages", type=int, default=1, help="수집할 페이지 수. 현재는 1~5 숫자 버튼만 지원")
     parser.add_argument("--start-page", type=int, default=1, help="수집을 시작할 페이지 번호")
     parser.add_argument("--limit", type=int, default=None, help="중복 제거 기준 최대 기사 수")
+    parser.add_argument("--append-existing", action="store_true", help="기존 news_raw.csv를 유지하고 새 결과를 URL 기준으로 병합")
     parser.add_argument("--test", action="store_true", help="기사 5개만 수집")
     parser.add_argument("--delay", type=float, default=REQUEST_DELAY_SECONDS, help="요청 간 딜레이(초)")
     args = parser.parse_args()
@@ -769,7 +779,7 @@ def main():
 
     try:
         records_to_save = records
-        if args.start_page > 1 and not args.test:
+        if (args.start_page > 1 or args.append_existing) and not args.test:
             existing_records = load_existing_news_raw_csv()
             records_to_save = merge_records_by_url(existing_records, records)
         save_news_raw_csv(records_to_save)
