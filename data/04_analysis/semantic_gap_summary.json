@@ -6,6 +6,148 @@
   "semantic_bridge_count": 66,
   "semantic_gap_count": 13,
   "average_similarity": 0.5558548468564238,
-  "lowest_similarity_examples_top10": [],
-  "highest_similarity_examples_top10": []
+  "lowest_similarity_examples_top10": [
+    {
+      "direction": "youtube_to_news",
+      "source_keyword": "힘들다",
+      "nearest_keyword": "청년",
+      "similarity": 0.30685681104660034,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "선관위",
+      "nearest_keyword": "일제",
+      "similarity": 0.3094000220298767,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "탄소",
+      "nearest_keyword": "교수",
+      "similarity": 0.32533955574035645,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "민주당",
+      "nearest_keyword": "인물",
+      "similarity": 0.3573938012123108,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "투표",
+      "nearest_keyword": "선택",
+      "similarity": 0.38069796562194824,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "중국",
+      "nearest_keyword": "꿈",
+      "similarity": 0.38162824511528015,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "코스피",
+      "nearest_keyword": "지금",
+      "similarity": 0.38396772742271423,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "북한",
+      "nearest_keyword": "꿈",
+      "similarity": 0.3848136067390442,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "수사",
+      "nearest_keyword": "내용",
+      "similarity": 0.3895637094974518,
+      "relation_type": "semantic_gap"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "도서관",
+      "nearest_keyword": "집",
+      "similarity": 0.39105919003486633,
+      "relation_type": "semantic_gap"
+    }
+  ],
+  "highest_similarity_examples_top10": [
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "주",
+      "nearest_keyword": "주다",
+      "similarity": 0.756223201751709,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "youtube_to_news",
+      "source_keyword": "주다",
+      "nearest_keyword": "주",
+      "similarity": 0.756223201751709,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "youtube_to_news",
+      "source_keyword": "마음",
+      "nearest_keyword": "생각",
+      "similarity": 0.7512744069099426,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "생각",
+      "nearest_keyword": "마음",
+      "similarity": 0.7512744069099426,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "나오다",
+      "nearest_keyword": "들어가다",
+      "similarity": 0.7485674619674683,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "youtube_to_news",
+      "source_keyword": "들어가다",
+      "nearest_keyword": "나오다",
+      "similarity": 0.7485674619674683,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "뒤",
+      "nearest_keyword": "앞",
+      "similarity": 0.7299536466598511,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "youtube_to_news",
+      "source_keyword": "앞",
+      "nearest_keyword": "뒤",
+      "similarity": 0.7299536466598511,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "news_to_youtube",
+      "source_keyword": "대표",
+      "nearest_keyword": "이름",
+      "similarity": 0.7107511162757874,
+      "relation_type": "semantic_near"
+    },
+    {
+      "direction": "youtube_to_news",
+      "source_keyword": "이름",
+      "nearest_keyword": "대표",
+      "similarity": 0.7107511162757874,
+      "relation_type": "semantic_near"
+    }
+  ]
 }

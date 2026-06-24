@@ -1,4 +1,4 @@
-keyword,group,news_rank,news_core_score,news_total_count,news_doc_freq_ratio,youtube_rank,youtube_core_score,youtube_total_count,youtube_doc_freq_ratio
+﻿keyword,group,news_rank,news_core_score,news_total_count,news_doc_freq_ratio,youtube_rank,youtube_core_score,youtube_total_count,youtube_doc_freq_ratio
 책,common,32,1.2102288365722602,111,0.1095890410958904,1,6.8881993109169235,441,0.9846153846153847
 작가,common,84,0.947491039434589,79,0.07876712328767123,3,4.0524041813169225,164,0.5384615384615384
 쓰다,common,20,1.3556248477037671,157,0.21575342465753425,7,2.0103605145384615,69,0.4

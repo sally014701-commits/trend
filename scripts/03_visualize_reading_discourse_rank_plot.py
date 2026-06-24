@@ -1,4 +1,4 @@
-"""
+﻿"""
 Reclassify reading discourse semantic similarity by quantiles and draw one rank plot.
 
 Run:

@@ -1,4 +1,4 @@
-rank,token,pos,core_score,tfidf_avg_seen,total_count,doc_freq,doc_freq_ratio
+﻿rank,token,pos,core_score,tfidf_avg_seen,total_count,doc_freq,doc_freq_ratio
 1,대통령,NNG,2.645729065822945,14.046416131278182,291,55,0.18835616438356165
 2,우주,NNG,2.287774929246575,27.8345949725,193,24,0.0821917808219178
 3,연구,NNG,2.059550925862671,11.136830932442592,225,54,0.18493150684931506

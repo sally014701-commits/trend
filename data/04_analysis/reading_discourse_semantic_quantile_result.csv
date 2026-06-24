@@ -1,4 +1,4 @@
-rank,youtube_keyword,nearest_news_keyword,similarity,quantile_relation_type,youtube_core_score,news_core_score
+﻿rank,youtube_keyword,nearest_news_keyword,similarity,quantile_relation_type,youtube_core_score,news_core_score
 1,힘들다,청년,0.3068568110466003,relative_semantic_gap,0.6872135651738461,1.247329975965069
 2,엄마,대표,0.3960256278514862,relative_semantic_gap,0.6905608072384616,1.9892669369219176
 3,소설집,생각,0.4179456233978271,relative_semantic_gap,0.8134403754723077,1.207699540017123

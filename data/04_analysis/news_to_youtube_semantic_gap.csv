@@ -1,4 +1,4 @@
-news_keyword,nearest_youtube_keyword,similarity,relation_type,news_core_score,youtube_core_score
+﻿news_keyword,nearest_youtube_keyword,similarity,relation_type,news_core_score,youtube_core_score
 주,주다,0.756223201751709,semantic_near,0.898922130109589,0.70747168742
 생각,마음,0.7512744069099426,semantic_near,1.207699540017123,1.7532605236307697
 나오다,들어가다,0.7485674619674683,semantic_near,1.019456850808904,0.7672215739507692
