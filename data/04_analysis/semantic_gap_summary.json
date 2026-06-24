@@ -1,0 +1,11 @@
+{
+  "model_name": "C:\\Users\\gram\\Desktop\\trend\\.codex_deps\\models\\KR-SBERT-V40K-klueNLI-augSTS",
+  "news_only_count": 84,
+  "youtube_only_count": 84,
+  "semantic_near_count": 89,
+  "semantic_bridge_count": 66,
+  "semantic_gap_count": 13,
+  "average_similarity": 0.5558548468564238,
+  "lowest_similarity_examples_top10": [],
+  "highest_similarity_examples_top10": []
+}
