@@ -1,0 +1,35 @@
+{
+  "scoring": "core_score = tfidf_avg_seen * doc_freq_ratio",
+  "sorting": "Top 100 selected by core_score descending only",
+  "filters": {
+    "news_min_doc_freq": 3,
+    "youtube_min_doc_freq": 2,
+    "removed_user_words_count": 122,
+    "news_stopwords_count": 13,
+    "youtube_stopwords_count": 22
+  },
+  "news": {
+    "total_docs": 292,
+    "input_rows": 49562,
+    "rows_after_stopword_userword_removal": 47504,
+    "removed_rows": 2058,
+    "candidate_tokens_after_min_doc_freq": 3637,
+    "top100_count": 100,
+    "min_doc_freq": 3
+  },
+  "youtube": {
+    "total_docs": 65,
+    "input_rows": 7363,
+    "rows_after_stopword_userword_removal": 6363,
+    "removed_rows": 1000,
+    "candidate_tokens_after_min_doc_freq": 975,
+    "top100_count": 100,
+    "min_doc_freq": 2
+  },
+  "overlap": {
+    "common": 16,
+    "news_only": 84,
+    "youtube_only": 84,
+    "total_rows": 184
+  }
+}
