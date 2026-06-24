@@ -11,3 +11,8 @@ env/
 .mypy_cache/
 node_modules/
 .codex_tmp/
+.codex_deps/
+.venv-sbert/
+.venv-sbert2/
+*.pyc
+.codex_git_tmp/
