@@ -1,14 +1,16 @@
 # Trend 뉴스·유튜브 텍스트 분석 프로젝트
 
-한겨레 기사와 유튜브 영상 내용을 수집하고, 분석 가능한 정제 텍스트·세그먼트·형태소 토큰·TF-IDF·불용어 후보 파일로 정리한 프로젝트입니다.
+한겨레 기사와 북튜버 유튜브 영상 내용을 수집하고, 분석 가능한 정제 텍스트·세그먼트·형태소 토큰·TF-IDF·불용어·핵심 키워드·의미 유사도 결과로 정리한 프로젝트입니다.
 
-현재 데이터 흐름은 크게 세 단계입니다.
+현재 데이터 흐름은 크게 다섯 단계입니다.
 
 1. `data/processed`: 원천 수집 결과
 2. `data/02_processing`: 분석 전 정제·세그먼트화 결과
-3. `data/03_processing`: Kiwi 형태소 분석, TF-IDF, 불용어 후보 결과
+3. `data/03_processing`: Kiwi 형태소 분석, TF-IDF, 불용어 후보와 최종 불용어 결과
+4. `data/04_analysis`: 불용어와 유저워드를 제거한 핵심 키워드 비교 및 의미 유사도 분석 결과
+5. `data/05_figures`: 의미 유사도 결과 시각화
 
-`.env`, Python/Node 캐시, 대용량 유튜브 오디오 원본은 저장소에서 제외합니다.
+`.env`, Python/Node 캐시, 로컬 가상환경, 대용량 유튜브 오디오 원본은 저장소에서 제외합니다.
 
 ## 전체 구성
 
@@ -21,6 +23,10 @@ trend/
 ├── crawl_hani_news.py
 ├── update_news_txt_from_article_pages.py
 ├── collect_youtube_transcripts.py
+├── scripts/
+│   ├── 02_semantic_gap_sbert.py
+│   ├── 03_visualize_reading_discourse_gap.py
+│   └── 03_visualize_reading_discourse_rank_plot.py
 └── data/
     ├── processed/
     │   ├── news_raw.csv
@@ -42,6 +48,22 @@ trend/
     │   ├── tokens_youtube.csv
     │   ├── kiwi_user_words_youtube.csv
     │   └── stopwords.xlsx
+    ├── 04_analysis/
+    │   ├── keyword_profile_news.csv
+    │   ├── keyword_profile_youtube.csv
+    │   ├── keyword_overlap_result.csv
+    │   ├── keyword_overlap_summary.json
+    │   ├── news_to_youtube_semantic_gap.csv
+    │   ├── youtube_to_news_semantic_gap.csv
+    │   ├── semantic_gap_summary.json
+    │   ├── reading_discourse_semantic_visual_summary.csv
+    │   └── reading_discourse_semantic_quantile_result.csv
+    ├── 05_figures/
+    │   ├── reading_discourse_relation_distribution.png
+    │   ├── reading_discourse_similarity_distribution.png
+    │   ├── reading_discourse_top15_semantic_gaps.png
+    │   ├── reading_discourse_top15_semantic_near.png
+    │   └── reading_discourse_similarity_rank_plot.png
     └── raw/
         ├── news_txt/
         ├── youtube_transcripts_txt/
@@ -57,7 +79,7 @@ trend/
 | `collect_youtube_transcripts.py` | 유튜브 오디오를 추출하고 Gemini API로 전사·정리해 CSV/txt로 저장합니다. |
 | `youtube_link.txt` | 수집 대상 유튜브 URL 목록입니다. |
 | `requirements.txt` | 수집/전사 스크립트 실행에 필요한 Python 패키지 목록입니다. |
-| `.gitignore` | `.env`, 캐시, 대용량 오디오, `node_modules`, `.codex_tmp` 등을 제외합니다. |
+| `.gitignore` | `.env`, 캐시, 대용량 오디오, 로컬 가상환경, 작업용 임시 폴더 등을 제외합니다. |
 
 ## 데이터 산출물
 
@@ -95,12 +117,12 @@ trend/
 
 `stopwords.xlsx` 시트 구성은 다음과 같습니다.
 
-| 시트 | 설명 |
-| --- | --- |
-| `news_candidates` | 뉴스 불용어 후보입니다. 기준은 `tfidf <= 2`인 문서-토큰 행이 하나라도 있거나 `doc_freq_ratio >= 0.5`인 토큰입니다. |
-| `yt_candidates` | 유튜브 불용어 후보입니다. 같은 기준을 적용했습니다. |
-| `news_stopwords` | 뉴스 최종 불용어 13개입니다. |
-| `yt_stopwords` | 유튜브 최종 불용어 22개입니다. 유튜브 후보 중 `책`, `읽다`, `소설`, `작가`, `마음`, `느끼다`, `쓰다`, `좋아하다`, `좋다`, `재밌다`는 최종 불용어에서 제외했습니다. |
+| 시트 | 행 수 | 설명 |
+| --- | ---: | --- |
+| `news_candidates` | 13 | 뉴스 불용어 후보입니다. |
+| `yt_candidates` | 32 | 유튜브 불용어 후보입니다. |
+| `news_stopwords` | 13 | 뉴스 최종 불용어입니다. |
+| `yt_stopwords` | 22 | 유튜브 최종 불용어입니다. 유튜브 후보 중 `책`, `읽다`, `소설`, `작가`, `마음`, `느끼다`, `쓰다`, `좋아하다`, `좋다`, `재밌다`는 최종 불용어에서 제외했습니다. |
 
 ## 형태소 분석 기준
 
@@ -151,6 +173,116 @@ OR
 doc_freq_ratio >= 0.5
 ```
 
+## 분석 데이터 및 의미 유사도 분석
+
+불용어와 유튜브 사용자 사전 단어를 제거한 뒤, 뉴스와 북튜버 담화의 핵심 키워드를 비교하고 의미적 거리 분석을 수행했습니다. 이 단계의 산출물은 `data/04_analysis`와 `data/05_figures`에 저장합니다.
+
+### 1. 핵심 키워드 프로필
+
+입력 파일은 다음과 같습니다.
+
+- `data/03_processing/tokens_news.csv`
+- `data/03_processing/tokens_youtube.csv`
+- `data/03_processing/stopwords.xlsx`
+- `data/03_processing/kiwi_user_words_youtube.csv`
+
+후보 필터는 뉴스 `doc_freq >= 3`, 유튜브 `doc_freq >= 2`입니다. 핵심 키워드 점수는 다음 공식으로 계산했습니다.
+
+```text
+core_score = tfidf_avg_seen * doc_freq_ratio
+```
+
+- `tfidf_avg_seen`: 해당 단어가 등장한 문서들에서의 평균 TF-IDF
+- `doc_freq_ratio`: 해당 단어가 등장한 문서 수 / 전체 문서 수
+- 정렬 기준: 오직 `core_score` 내림차순
+- 선정 개수: 뉴스 Top 100, 유튜브 Top 100
+
+| 경로 | 행 수 | 설명 |
+| --- | ---: | --- |
+| `data/04_analysis/keyword_profile_news.csv` | 100 | 뉴스 핵심 키워드 Top 100입니다. |
+| `data/04_analysis/keyword_profile_youtube.csv` | 100 | 유튜브 핵심 키워드 Top 100입니다. |
+| `data/04_analysis/keyword_overlap_result.csv` | 184 | 뉴스 Top 100과 유튜브 Top 100을 `common`, `news_only`, `youtube_only`로 분류한 결과입니다. |
+| `data/04_analysis/keyword_overlap_summary.json` | - | 핵심 키워드 산출 조건과 그룹별 개수 요약입니다. |
+
+`keyword_overlap_result.csv`의 그룹 구성은 다음과 같습니다.
+
+| 그룹 | 개수 | 의미 |
+| --- | ---: | --- |
+| `common` | 16 | 뉴스와 유튜브 Top 100에 모두 포함된 키워드입니다. |
+| `news_only` | 84 | 뉴스 Top 100에만 포함된 키워드입니다. |
+| `youtube_only` | 84 | 유튜브 Top 100에만 포함된 키워드입니다. |
+
+### 2. KoSentenceBERT 의미 유사도 분석
+
+`keyword_overlap_result.csv`를 기반으로 `common`은 제외하고, `news_only` 키워드와 `youtube_only` 키워드 사이의 의미 유사도를 계산했습니다.
+
+- 스크립트: `scripts/02_semantic_gap_sbert.py`
+- 모델: `snunlp/KR-SBERT-V40K-klueNLI-augSTS`
+- 방식: 뉴스 전용 키워드와 유튜브 전용 키워드를 embedding한 뒤 cosine similarity matrix 계산
+- 방향 1: 각 `news_only` 키워드마다 가장 가까운 `youtube_only` 키워드 1개 선택
+- 방향 2: 각 `youtube_only` 키워드마다 가장 가까운 `news_only` 키워드 1개 선택
+
+고정 임계값 해석 기준은 다음과 같습니다.
+
+| 기준 | relation_type |
+| --- | --- |
+| `similarity >= 0.55` | `semantic_near` |
+| `0.40 <= similarity < 0.55` | `semantic_bridge` |
+| `similarity < 0.40` | `semantic_gap` |
+
+| 경로 | 행 수 | 설명 |
+| --- | ---: | --- |
+| `data/04_analysis/news_to_youtube_semantic_gap.csv` | 84 | 뉴스 전용 키워드별 가장 가까운 유튜브 전용 키워드입니다. |
+| `data/04_analysis/youtube_to_news_semantic_gap.csv` | 84 | 유튜브 전용 키워드별 가장 가까운 뉴스 전용 키워드입니다. 독서담화 중심 해석의 기준 파일입니다. |
+| `data/04_analysis/semantic_gap_summary.json` | - | 모델명, 키워드 수, relation type 개수, 평균 similarity 등 의미 유사도 요약입니다. |
+
+### 3. 독서담화 중심 시각화
+
+초기 시각화 스크립트는 `youtube_to_news_semantic_gap.csv`를 중심으로 독서담화 키워드가 뉴스 트렌드 언어와 어떤 거리감을 갖는지 보여줍니다.
+
+- 스크립트: `scripts/03_visualize_reading_discourse_gap.py`
+- 입력: `data/04_analysis/youtube_to_news_semantic_gap.csv`, `data/04_analysis/news_to_youtube_semantic_gap.csv`
+- 출력 요약 CSV: `data/04_analysis/reading_discourse_semantic_visual_summary.csv`
+
+생성된 그림은 다음과 같습니다.
+
+| 경로 | 설명 |
+| --- | --- |
+| `data/05_figures/reading_discourse_relation_distribution.png` | 고정 임계값 기준 relation type 분포입니다. |
+| `data/05_figures/reading_discourse_similarity_distribution.png` | similarity 분포 히스토그램입니다. |
+| `data/05_figures/reading_discourse_top15_semantic_gaps.png` | 독서담화 키워드 중 뉴스 언어와 가장 멀리 떨어진 쌍 상위 15개입니다. |
+| `data/05_figures/reading_discourse_top15_semantic_near.png` | 독서담화 키워드 중 뉴스 언어와 가장 가까운 쌍 상위 15개입니다. |
+
+### 4. 분위수 기반 rank plot
+
+고정 threshold 대신 `youtube_to_news_semantic_gap.csv` 내부의 similarity 분포를 기준으로 상대적 의미 관계를 다시 부여했습니다.
+
+- 스크립트: `scripts/03_visualize_reading_discourse_rank_plot.py`
+- 입력: `data/04_analysis/youtube_to_news_semantic_gap.csv`
+- 출력 CSV: `data/04_analysis/reading_discourse_semantic_quantile_result.csv`
+- 출력 PNG: `data/05_figures/reading_discourse_similarity_rank_plot.png`
+
+분위수 기준은 다음과 같습니다.
+
+```text
+Q25 = 0.492756
+Q75 = 0.634720
+
+similarity <= Q25       -> relative_semantic_gap
+Q25 < similarity < Q75  -> relative_semantic_bridge
+similarity >= Q75       -> relative_semantic_near
+```
+
+분위수 기반 분류 결과는 다음과 같습니다.
+
+| quantile_relation_type | 개수 |
+| --- | ---: |
+| `relative_semantic_gap` | 21 |
+| `relative_semantic_bridge` | 42 |
+| `relative_semantic_near` | 21 |
+
+`reading_discourse_similarity_rank_plot.png`는 전체 84개 독서담화-뉴스 키워드쌍을 similarity 낮은 순에서 높은 순으로 정렬한 rank plot입니다. x축은 rank, y축은 similarity이며 Q25와 Q75 기준선을 함께 표시합니다. 이 그림은 “뉴스 트렌드 언어와 가장 멀리 떨어진 독서담화 표현”과 “뉴스 언어와 상대적으로 가까운 독서담화 표현”을 한 화면에서 확인하기 위한 최종 요약 시각화입니다.
+
 ## 스크립트별 작업 방식
 
 ### `crawl_hani_news.py`
@@ -188,6 +320,30 @@ doc_freq_ratio >= 0.5
 7. CSV와 txt 저장
 8. 처리 로그 기록
 
+### `scripts/02_semantic_gap_sbert.py`
+
+뉴스 전용 키워드와 유튜브 전용 키워드 사이의 KoSentenceBERT 의미 유사도를 계산합니다.
+
+```bash
+python scripts/02_semantic_gap_sbert.py
+```
+
+### `scripts/03_visualize_reading_discourse_gap.py`
+
+독서담화 중심 의미 유사도 결과를 고정 임계값 기준으로 요약하고, relation 분포·similarity 분포·상위 gap/near 쌍을 시각화합니다.
+
+```bash
+python scripts/03_visualize_reading_discourse_gap.py
+```
+
+### `scripts/03_visualize_reading_discourse_rank_plot.py`
+
+독서담화 중심 의미 유사도 결과를 분위수 기준으로 재분류하고, 전체 키워드쌍을 낮은 similarity에서 높은 similarity 순으로 정렬한 rank plot 하나를 생성합니다.
+
+```bash
+python scripts/03_visualize_reading_discourse_rank_plot.py
+```
+
 ## 실행 방법
 
 패키지를 설치합니다.
@@ -221,7 +377,7 @@ python update_news_txt_from_article_pages.py --input data/processed/news_raw.csv
 python collect_youtube_transcripts.py --test
 ```
 
-이미 처리된 영상은 건너뛰고 이어서 전사합니다.
+이미 처리한 영상은 건너뛰고 이어서 전사합니다.
 
 ```bash
 python collect_youtube_transcripts.py --skip-existing
@@ -229,7 +385,7 @@ python collect_youtube_transcripts.py --skip-existing
 
 ## 환경 변수
 
-유튜브 전사 기능을 실행하려면 프로젝트 루트에 `.env` 파일이 필요합니다.
+유튜브 전사 기능을 실행하려면 프로젝트 루트의 `.env` 파일이 필요합니다.
 
 ```text
 GEMINI_API_KEY=your_api_key_here
@@ -252,17 +408,21 @@ GEMINI_MODEL=gemini-2.5-flash
 | 유튜브 토큰 | `tokens_youtube.csv` 7,363행, book 세그먼트 문서 수 65 |
 | Kiwi 사용자 사전 | `kiwi_user_words_youtube.csv` 122개 |
 | 최종 불용어 | `stopwords.xlsx` 안의 `news_stopwords` 13개, `yt_stopwords` 22개 |
+| 핵심 키워드 | 뉴스 Top 100, 유튜브 Top 100 |
+| 키워드 overlap | common 16개, news_only 84개, youtube_only 84개 |
+| 의미 유사도 결과 | news→youtube 84행, youtube→news 84행 |
+| 분위수 기반 독서담화 결과 | 84행, gap 21개, bridge 42개, near 21개 |
 
 ## GitHub 포함/제외 기준
 
-GitHub에 포함하는 항목은 코드, README, 수집 대상 링크, CSV/XLSX 산출물, txt 산출물입니다.
+GitHub에 포함하는 항목은 코드, README, 수집 대상 링크, CSV/XLSX 산출물, txt 산출물, 분석용 CSV/JSON, 일부 시각화 PNG입니다.
 
 GitHub에서 제외하는 항목은 다음과 같습니다.
 
 - `.env`: Gemini API 키 등 민감 정보 포함
-- `__pycache__/`: Python 실행 캐시
+- `__pycache__/`, `*.pyc`: Python 실행 캐시
 - `data/raw/youtube_audio/`: 유튜브 mp3/webm 원본으로 파일 크기가 큼
-- `.venv/`, `venv/`, `env/`: 로컬 가상환경
+- `.venv/`, `venv/`, `env/`, `.venv-sbert/`, `.venv-sbert2/`: 로컬 가상환경
 - `.pytest_cache/`, `.mypy_cache/`: 개발 도구 캐시
 - `node_modules/`: 로컬 Node 의존성
-- `.codex_tmp/`: 작업용 임시 파일
+- `.codex_tmp/`, `.codex_deps/`, `.codex_git_tmp/`: 작업용 임시 파일과 로컬 의존성 캐시
