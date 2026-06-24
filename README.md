@@ -1,10 +1,16 @@
-# Trend 뉴스·유튜브 텍스트 수집 프로젝트
+# Trend 뉴스·유튜브 텍스트 분석 프로젝트
 
-한겨레 정치 기사와 유튜브 영상 내용을 수집해 분석 가능한 텍스트/CSV 형태로 정리한 프로젝트입니다. 뉴스는 기사 본문을 수집하고, 유튜브는 영상 오디오를 추출한 뒤 Gemini API로 전사 및 문장 정리를 수행했습니다.
+한겨레 기사와 유튜브 영상 내용을 수집하고, 분석 가능한 정제 텍스트·세그먼트·형태소 토큰·TF-IDF·불용어 후보 파일로 정리한 프로젝트입니다.
 
-이 저장소는 코드만이 아니라 실제 수집 결과 CSV와 txt 산출물도 함께 포함합니다. 단, API 키가 들어가는 `.env`와 대용량 유튜브 오디오 원본은 GitHub에 올리지 않았습니다.
+현재 데이터 흐름은 크게 세 단계입니다.
 
-## 전체 구성 요약
+1. `data/processed`: 원천 수집 결과
+2. `data/02_processing`: 분석 전 정제·세그먼트화 결과
+3. `data/03_processing`: Kiwi 형태소 분석, TF-IDF, 불용어 후보 결과
+
+`.env`, Python/Node 캐시, 대용량 유튜브 오디오 원본은 저장소에서 제외합니다.
+
+## 전체 구성
 
 ```text
 trend/
@@ -22,93 +28,165 @@ trend/
     │   ├── youtube_meta_raw.csv
     │   ├── youtube_transcript_raw.csv
     │   └── youtube_transcript_log.csv
+    ├── 02_processing/
+    │   ├── news_clean.csv
+    │   ├── news_clean.xlsx
+    │   ├── youtube_clean.csv
+    │   ├── youtube_clean.xlsx
+    │   ├── youtube_segments.csv
+    │   ├── youtube_segments.xlsx
+    │   ├── metadata_clean.csv
+    │   └── youtube_clean_txt/
+    ├── 03_processing/
+    │   ├── tokens_news.csv
+    │   ├── tokens_youtube.csv
+    │   ├── kiwi_user_words_youtube.csv
+    │   └── stopwords.xlsx
     └── raw/
         ├── news_txt/
-        │   └── 정치/
-        │       └── {article_id}.txt
-        └── youtube_transcripts_txt/
-            └── {video_id}.txt
+        ├── youtube_transcripts_txt/
+        └── youtube_audio/   # 로컬 전용, Git 제외
 ```
 
-로컬 작업 폴더에는 `data/raw/youtube_audio/`도 존재합니다. 이 폴더에는 유튜브 영상에서 추출한 mp3 오디오 11개가 들어 있지만, 파일 크기가 커서 `.gitignore`로 제외했습니다.
+## 루트 파일
 
-## 루트 파일 설명
-
-| 파일 | 포함 내용 | 확인 포인트 |
-| --- | --- | --- |
-| `README.md` | 프로젝트 목적, 파일 구조, 작업 방식, 실행 방법을 정리한 안내 문서입니다. | GitHub 저장소 첫 화면에서 바로 보이는 문서입니다. |
-| `.gitignore` | GitHub에 올리지 않을 파일 목록입니다. | `.env`, Python 캐시, 유튜브 오디오 mp3 원본을 제외합니다. |
-| `requirements.txt` | 프로젝트 실행에 필요한 Python 패키지 목록입니다. | `requests`, `beautifulsoup4`, `lxml`, `playwright`, `yt-dlp`, `google-genai`, `imageio-ffmpeg`가 포함됩니다. |
-| `youtube_link.txt` | 유튜브 수집 대상 링크 목록입니다. | 총 11개의 유튜브 URL이 들어 있습니다. |
-| `crawl_hani_news.py` | 한겨레 기사 목록/상세 페이지를 수집하는 메인 크롤러입니다. | 기사 URL 수집, 본문 파싱, txt 저장, CSV 저장, 로그 기록을 수행합니다. |
-| `update_news_txt_from_article_pages.py` | 이미 수집된 기사 URL을 다시 방문해 txt 본문 파일을 갱신하는 보조 스크립트입니다. | `news_raw.csv`의 `article_id`, `url`을 기준으로 txt를 재생성합니다. |
-| `collect_youtube_transcripts.py` | 유튜브 오디오를 추출하고 Gemini로 전사/정리하는 메인 스크립트입니다. | mp3 추출, Gemini 업로드, 전사, 문장 정리, CSV/txt 저장을 수행합니다. |
-
-## 데이터 파일 설명
-
-### 뉴스 데이터
-
-| 경로 | 포함 내용 |
+| 파일 | 설명 |
 | --- | --- |
-| `data/processed/news_raw.csv` | 기사 단위 통합 CSV입니다. `article_id`, `title`, `published_date`, `section`, `body_text`, `url` 컬럼을 포함합니다. |
-| `data/processed/news_crawl_log.csv` | 기사 수집 중 발생한 제외, 실패, 경고 내역입니다. `article_id`, `url`, `status`, `reason`, `section`, `sub_section`, `occurred_at` 컬럼을 포함합니다. |
-| `data/raw/news_txt/정치/*.txt` | 기사 본문을 기사 ID별 txt 파일로 저장한 결과입니다. 현재 58개 파일이 포함되어 있습니다. |
+| `crawl_hani_news.py` | 한겨레 기사 목록과 상세 페이지를 수집해 `news_raw.csv`와 기사별 txt를 생성합니다. |
+| `update_news_txt_from_article_pages.py` | 기존 `news_raw.csv`의 URL을 다시 방문해 기사 txt를 재생성하는 보조 스크립트입니다. |
+| `collect_youtube_transcripts.py` | 유튜브 오디오를 추출하고 Gemini API로 전사·정리해 CSV/txt로 저장합니다. |
+| `youtube_link.txt` | 수집 대상 유튜브 URL 목록입니다. |
+| `requirements.txt` | 수집/전사 스크립트 실행에 필요한 Python 패키지 목록입니다. |
+| `.gitignore` | `.env`, 캐시, 대용량 오디오, `node_modules`, `.codex_tmp` 등을 제외합니다. |
 
-### 유튜브 데이터
+## 데이터 산출물
 
-| 경로 | 포함 내용 |
+### 1. 원천 수집 데이터: `data/processed`
+
+| 경로 | 행 수 | 주요 컬럼 | 설명 |
+| --- | ---: | --- | --- |
+| `data/processed/news_raw.csv` | 292 | `article_id`, `title`, `published_date`, `section`, `body_text`, `url` | 한겨레 기사 원문 수집 결과입니다. |
+| `data/processed/news_crawl_log.csv` | - | `article_id`, `url`, `status`, `reason`, `section`, `sub_section`, `occurred_at` | 뉴스 수집 중 제외·실패·경고 내역입니다. |
+| `data/processed/youtube_meta_raw.csv` | - | `video_id`, `channel`, `title`, `upload_date`, `description`, `view_count`, `duration`, `url` | 유튜브 영상 메타데이터입니다. |
+| `data/processed/youtube_transcript_raw.csv` | - | `video_id`, `transcript_raw`, `transcript_cleaned`, `source_type` | Gemini 전사 원문과 정리본입니다. |
+| `data/processed/youtube_transcript_log.csv` | - | `processed_at`, `video_id`, `url`, `audio_path`, `audio_status`, `transcription_status`, `cleaning_status`, `txt_status`, `error` | 유튜브 처리 로그입니다. |
+
+### 2. 정제 데이터: `data/02_processing`
+
+| 경로 | 행 수 | 주요 컬럼 | 설명 |
+| --- | ---: | --- | --- |
+| `data/02_processing/news_clean.csv` | 292 | `article_id`, `title`, `published_date`, `section`, `body_text`, `url` | 분석용으로 정제한 뉴스 본문입니다. 한겨레 뉴스레터 안내문 등 노이즈를 제거했고, 본문이 `(`로 깨졌던 8개 행은 원본에서 복구했습니다. |
+| `data/02_processing/news_clean.xlsx` | 292 | 동일 | Excel 검토용 뉴스 정제본입니다. |
+| `data/02_processing/youtube_clean.csv` | - | `video_id`, `transcript_raw`, `transcript_cleaned`, `source_type` | 유튜브 전사 정리본입니다. |
+| `data/02_processing/youtube_clean.xlsx` | - | 동일 | Excel 검토용 유튜브 정리본입니다. |
+| `data/02_processing/youtube_segments.csv` | 93 | `segment_id`, `video_id`, `seg_idx`, `seg_type`, `book_title`, `segment_text`, `verified` | 유튜브 전사문을 세그먼트 단위로 나눈 파일입니다. |
+| `data/02_processing/youtube_segments.xlsx` | 93 | `segment_id`, `video_id`, `seg_idx`, `seg_type`, `book_title`, `author`, `segment_text`, `verified`, `channel`, `upload_date` | 토큰화에 사용한 Excel 세그먼트 파일입니다. |
+| `data/02_processing/metadata_clean.csv` | - | - | 유튜브/도서 메타데이터 정제본입니다. |
+| `data/02_processing/youtube_clean_txt/*.txt` | 12 | - | 정제된 유튜브 전사 txt입니다. |
+
+### 3. 토큰·TF-IDF·불용어 데이터: `data/03_processing`
+
+| 경로 | 행 수 | 주요 컬럼 | 설명 |
+| --- | ---: | --- | --- |
+| `data/03_processing/tokens_news.csv` | 49,562 | `article_id`, `published_date`, `section`, `token`, `pos`, `count`, `tfidf` | 뉴스 본문을 Kiwi로 형태소 분석한 토큰 테이블입니다. 문서 단위는 `article_id`입니다. |
+| `data/03_processing/tokens_youtube.csv` | 7,363 | `segment_id`, `video_id`, `channel`, `upload_date`, `book_title`, `author`, `token`, `pos`, `count`, `tfidf` | 유튜브 `seg_type == book` 세그먼트를 Kiwi로 분석한 토큰 테이블입니다. 문서 단위는 `segment_id`입니다. |
+| `data/03_processing/kiwi_user_words_youtube.csv` | 122 | `word`, `pos` | 유튜브 토큰화 전 `book_title`, `author` 고유값에서 추출해 Kiwi 사용자 사전에 등록한 단어 목록입니다. |
+| `data/03_processing/stopwords.xlsx` | - | 시트별 상이 | 뉴스/유튜브 불용어 후보와 최종 불용어 시트입니다. |
+
+`stopwords.xlsx` 시트 구성은 다음과 같습니다.
+
+| 시트 | 설명 |
 | --- | --- |
-| `data/processed/youtube_meta_raw.csv` | 유튜브 영상 메타데이터 CSV입니다. `video_id`, `channel`, `title`, `upload_date`, `description`, `view_count`, `duration`, `url` 컬럼을 포함합니다. |
-| `data/processed/youtube_transcript_raw.csv` | Gemini 전사 결과 CSV입니다. `video_id`, `transcript_raw`, `transcript_cleaned`, `source_type` 컬럼을 포함합니다. |
-| `data/processed/youtube_transcript_log.csv` | 유튜브 처리 로그입니다. `processed_at`, `video_id`, `url`, `audio_path`, `audio_status`, `transcription_status`, `cleaning_status`, `txt_status`, `error` 컬럼을 포함합니다. |
-| `data/raw/youtube_transcripts_txt/*.txt` | 전사 정리본을 영상 ID별 txt 파일로 저장한 결과입니다. 현재 4개 파일이 포함되어 있습니다. |
-| `data/raw/youtube_audio/*.mp3` | 유튜브 영상에서 추출한 오디오 원본입니다. 로컬에는 11개가 있으나 GitHub에는 포함하지 않았습니다. |
+| `news_candidates` | 뉴스 불용어 후보입니다. 기준은 `tfidf <= 2`인 문서-토큰 행이 하나라도 있거나 `doc_freq_ratio >= 0.5`인 토큰입니다. |
+| `yt_candidates` | 유튜브 불용어 후보입니다. 같은 기준을 적용했습니다. |
+| `news_stopwords` | 뉴스 최종 불용어 13개입니다. |
+| `yt_stopwords` | 유튜브 최종 불용어 22개입니다. 유튜브 후보 중 `책`, `읽다`, `소설`, `작가`, `마음`, `느끼다`, `쓰다`, `좋아하다`, `좋다`, `재밌다`는 최종 불용어에서 제외했습니다. |
+
+## 형태소 분석 기준
+
+Kiwi 형태소 분석은 다음 기준으로 수행했습니다.
+
+- 뉴스 분석 단위: 기사 1행, 즉 `article_id`
+- 유튜브 분석 단위: `seg_type == book`인 세그먼트 1행, 즉 `segment_id`
+- 추출 품사: `NNG`, `NNP`, `VA`, `VV`
+- 동사/형용사 원형 복원: `읽었습니다` → `읽다`, `힘들었어요` → `힘들다`
+- `count`: 각 문서 안에서 동일 `token + pos`가 등장한 횟수
+- 인코딩: `utf-8-sig`
+
+유튜브 토큰화 전에는 `youtube_segments.xlsx`의 `book_title`, `author` 고유값을 Kiwi 사용자 사전에 `NNP`로 등록했습니다. `author` 값에 `한강;정보라`처럼 세미콜론이 있으면 각각 나누어 등록했습니다.
+
+## TF-IDF 계산 기준
+
+`tokens_news.csv`, `tokens_youtube.csv`의 `tfidf` 컬럼은 문서별 개별 점수입니다. 평균값이 아닙니다.
+
+```text
+TF  = count(token, doc)
+IDF = log((1 + N) / (1 + df(token))) + 1
+TF-IDF = TF * IDF
+```
+
+- 뉴스의 `N`: 전체 기사 수 292
+- 유튜브의 `N`: `seg_type == book` 세그먼트 수 65
+- `df(token)`: 해당 토큰이 등장한 문서 수
+
+## 불용어 후보 계산 기준
+
+불용어 후보 집계 테이블은 다음 컬럼으로 구성됩니다.
+
+```text
+token | pos | total_count | doc_freq | doc_freq_ratio | tfidf_avg
+```
+
+- `total_count`: 전체 문서에서 해당 토큰의 count 합산
+- `doc_freq`: 해당 토큰이 등장한 문서 수
+- `doc_freq_ratio`: `doc_freq / 전체 문서 수`
+- `tfidf_avg`: 해당 토큰의 문서별 TF-IDF 평균
+- `pos`: 같은 토큰이 여러 품사로 나뉘면 최빈 품사
+
+현재 `stopwords.xlsx` 후보 시트에는 다음 OR 조건을 적용했습니다.
+
+```text
+tfidf <= 2 인 문서-토큰 행이 하나라도 있음
+OR
+doc_freq_ratio >= 0.5
+```
 
 ## 스크립트별 작업 방식
 
-### 1. `crawl_hani_news.py`
+### `crawl_hani_news.py`
 
 한겨레 섹션 페이지를 입력으로 받아 기사 URL을 수집하고, 각 기사 상세 페이지에서 본문 데이터를 추출합니다.
 
-주요 처리 흐름은 다음과 같습니다.
+주요 흐름:
 
-1. 입력받은 섹션 URL에 접속합니다.
-2. `/arti/.../{article_id}.html` 형태의 기사 링크만 필터링합니다.
-3. 중복 URL을 제거합니다.
-4. 각 기사 상세 페이지에서 제목, 발행일, 섹션, 하위 섹션, 본문을 추출합니다.
-5. 광고, 이미지 캡션, 관련 기사, 기자 정보 등 분석에 불필요한 요소를 제거합니다.
-6. 본문이 짧거나 비어 있으면 Playwright로 렌더링한 뒤 다시 추출합니다.
-7. 기사 본문은 `data/raw/news_txt/정치/{article_id}.txt`로 저장합니다.
-8. 전체 기사 데이터는 `data/processed/news_raw.csv`로 저장합니다.
-9. 실패하거나 제외된 항목은 `data/processed/news_crawl_log.csv`에 기록합니다.
+1. 입력 섹션 URL 접속
+2. `/arti/.../{article_id}.html` 기사 링크 필터링
+3. 중복 URL 제거
+4. 기사 제목, 발행일, 섹션, 본문 추출
+5. 광고, 이미지 캡션, 관련 기사, 기자 정보 제거
+6. 본문이 짧거나 비어 있으면 Playwright 렌더링 후 재시도
+7. 기사별 txt를 `data/raw/news_txt/{section}/{article_id}.txt`에 저장
+8. 통합 CSV를 `data/processed/news_raw.csv`에 저장
+9. 실패·제외·경고를 `data/processed/news_crawl_log.csv`에 기록
 
-사용한 주요 라이브러리는 `requests`, `BeautifulSoup`, `lxml`, `playwright`입니다.
+### `update_news_txt_from_article_pages.py`
 
-### 2. `update_news_txt_from_article_pages.py`
+`data/processed/news_raw.csv`의 `article_id`, `url`을 기준으로 기사 상세 페이지를 다시 방문해 txt 본문을 재생성합니다. 본문 추출 로직 수정 후 txt만 갱신할 때 사용하는 보조 스크립트입니다.
 
-이미 만들어진 `data/processed/news_raw.csv`를 기준으로 기사 txt 파일을 다시 생성하는 스크립트입니다.
+### `collect_youtube_transcripts.py`
 
-이 스크립트는 CSV 안의 `article_id`와 `url`을 읽고, 각 URL을 다시 방문해 본문을 추출합니다. 기존 txt 파일이 있으면 덮어쓰고, 없으면 새로 만듭니다. 기사 본문 추출 로직을 수정했거나 txt 파일만 다시 정리하고 싶을 때 사용하는 보조 작업용 파일입니다.
+유튜브 영상 오디오를 추출하고 Gemini API로 한국어 전사문을 생성·정리합니다.
 
-처리 실패 내역은 `data/processed/news_txt_update_log.csv`에 저장되도록 코드가 구성되어 있습니다. 현재 GitHub에 올라간 산출물에는 해당 로그 파일이 생성되어 있지 않습니다.
+주요 흐름:
 
-### 3. `collect_youtube_transcripts.py`
-
-유튜브 영상 내용을 텍스트로 바꾸는 스크립트입니다. `youtube_meta_raw.csv`의 `video_id`와 `url`을 기준으로 작업합니다.
-
-주요 처리 흐름은 다음과 같습니다.
-
-1. `data/processed/youtube_meta_raw.csv`에서 영상 ID와 URL을 읽습니다.
-2. `yt-dlp`로 유튜브 영상의 오디오를 다운로드합니다.
-3. `imageio-ffmpeg`가 제공하는 ffmpeg로 mp3를 생성합니다.
-4. mp3 파일을 Gemini Files API에 업로드합니다.
-5. Gemini 모델로 한국어 전사문을 생성합니다.
-6. 전사문을 다시 Gemini에 보내 문장 단위로 정리합니다.
-7. 원문 전사와 정리본을 `data/processed/youtube_transcript_raw.csv`에 저장합니다.
-8. 정리본은 `data/raw/youtube_transcripts_txt/{video_id}.txt`로 따로 저장합니다.
-9. 오디오 추출, 전사, 정리, txt 저장 상태를 `data/processed/youtube_transcript_log.csv`에 남깁니다.
-
-Gemini API 키는 `.env` 파일의 `GEMINI_API_KEY`를 사용합니다. `.env`는 민감 정보이므로 저장소에 포함하지 않았습니다.
+1. `youtube_meta_raw.csv`에서 영상 ID와 URL 읽기
+2. `yt-dlp`로 오디오 다운로드
+3. `imageio-ffmpeg` 기반 ffmpeg로 mp3 생성
+4. Gemini Files API 업로드
+5. Gemini 모델로 한국어 전사 생성
+6. 전사문을 문장 단위로 정리
+7. CSV와 txt 저장
+8. 처리 로그 기록
 
 ## 실행 방법
 
@@ -119,13 +197,13 @@ pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-한겨레 정치 섹션을 테스트 수집합니다.
+한겨레 섹션을 테스트 수집합니다.
 
 ```bash
 python crawl_hani_news.py "https://www.hani.co.kr/arti/politics" --test
 ```
 
-한겨레 정치 섹션 여러 페이지를 수집합니다.
+한겨레 섹션 여러 페이지를 수집합니다.
 
 ```bash
 python crawl_hani_news.py "https://www.hani.co.kr/arti/politics" --max-pages 5 --delay 1
@@ -167,21 +245,24 @@ GEMINI_MODEL=gemini-2.5-flash
 
 | 구분 | 현재 상태 |
 | --- | --- |
-| 유튜브 링크 목록 | `youtube_link.txt`에 11개 URL |
-| 유튜브 오디오 원본 | 로컬 `data/raw/youtube_audio/`에 11개 mp3, GitHub 제외 |
-| 유튜브 전사 txt | `data/raw/youtube_transcripts_txt/`에 4개 |
-| 유튜브 전사 CSV | `data/processed/youtube_transcript_raw.csv`에 저장 |
-| 뉴스 기사 txt | `data/raw/news_txt/정치/`에 58개 |
-| 뉴스 기사 CSV | `data/processed/news_raw.csv`에 저장 |
+| 뉴스 원천 기사 | `news_raw.csv` 292행 |
+| 뉴스 정제본 | `news_clean.csv`, `news_clean.xlsx` 292행 |
+| 유튜브 세그먼트 | `youtube_segments.csv`, `youtube_segments.xlsx` 93행 |
+| 뉴스 토큰 | `tokens_news.csv` 49,562행, 문서 수 292 |
+| 유튜브 토큰 | `tokens_youtube.csv` 7,363행, book 세그먼트 문서 수 65 |
+| Kiwi 사용자 사전 | `kiwi_user_words_youtube.csv` 122개 |
+| 최종 불용어 | `stopwords.xlsx` 안의 `news_stopwords` 13개, `yt_stopwords` 22개 |
 
 ## GitHub 포함/제외 기준
 
-GitHub에 포함한 항목은 코드, README, 수집 대상 링크, CSV 산출물, txt 산출물입니다.
+GitHub에 포함하는 항목은 코드, README, 수집 대상 링크, CSV/XLSX 산출물, txt 산출물입니다.
 
-GitHub에서 제외한 항목은 다음과 같습니다.
+GitHub에서 제외하는 항목은 다음과 같습니다.
 
 - `.env`: Gemini API 키 등 민감 정보 포함
 - `__pycache__/`: Python 실행 캐시
-- `data/raw/youtube_audio/`: 유튜브 mp3 원본으로 파일 크기가 큼
+- `data/raw/youtube_audio/`: 유튜브 mp3/webm 원본으로 파일 크기가 큼
 - `.venv/`, `venv/`, `env/`: 로컬 가상환경
 - `.pytest_cache/`, `.mypy_cache/`: 개발 도구 캐시
+- `node_modules/`: 로컬 Node 의존성
+- `.codex_tmp/`: 작업용 임시 파일
